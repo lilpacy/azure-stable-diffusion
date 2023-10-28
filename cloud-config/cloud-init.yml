@@ -22,6 +22,7 @@ write_files:
       apt-get purge -y snapd unattended-upgrades
       rm -rf /snap /var/snap /var/lib/snapd /var/log/unattended-upgrades
       echo "--> Package updates"
+      sudo ln -sf /usr/bin/python3.8 /usr/bin/python3
       apt-get update
       apt-get dist-upgrade -y
       apt-get autoremove -y
@@ -39,13 +40,18 @@ write_files:
       add-apt-repository ppa:deadsnakes/ppa -y
       apt-get install -y python3.10 python3.10-dev python3.10-venv python3.10-distutils
       update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.10 1
+      curl -sS https://bootstrap.pypa.io/get-pip.py | python3.10
+      python3.10 -m pip install --upgrade pip
       # Note: this breaks Ubuntu subtly, so make sure to run all apt installs previously
 
       echo "--> Setting up scratch"
       # Make sure we can write to the temporary SSD storage
       mkdir -p /mnt/scratch
       chmod a+w /mnt/scratch
-      
+
+      # Fix to symbolic link to python3.10
+      sudo ln -sf /usr/bin/python3.10 /usr/bin/python3
+
       # Everything from here on down is run as a regular user
       sudo -i -u ${ADMIN_USERNAME} bash << EOF
       echo "--> Setting up cache"
@@ -54,11 +60,16 @@ write_files:
       ln -s /mnt/scratch/.cache ~/.cache
 
       echo "--> Cloning repositories"
-      bash <(wget -qO- https://raw.githubusercontent.com/AUTOMATIC1111/stable-diffusion-webui/master/webui.sh)
+      rm -rf ~/stable-diffusion-webui
+      git clone https://github.com/AUTOMATIC1111/stable-diffusion-webui.git ~/stable-diffusion-webui
+      cd ~/stable-diffusion-webui
+      chmod 700 webui.sh
+      # ./webui.sh --share &
       cd ~/stable-diffusion-webui
       # Make generated content persistent in the mounted file share so we can destroy the VM at will
       mkdir -p /srv/outputs
       ln -s /srv/outputs outputs
+      mkdir -p ~/stable-diffusion-webui/models/Stable-diffusion
       cd ~/stable-diffusion-webui/models/Stable-diffusion
       echo "--> Downloading precompiled attention model"
       wget -q -O model.ckpt https://raw.githubusercontent.com/TheLastBen/fast-stable-diffusion/main/precompiled/attention.py
@@ -82,7 +93,7 @@ write_files:
       rm -r stable-diffusion-inpainting/vae
       cp -r sd-vae-ft-mse stable-diffusion-v1-5/vae        
       mv sd-vae-ft-mse stable-diffusion-inpainting/vae
-      
+
       # Retrieve and patch the model converter in a sane fashion
       wget -O convertosd.py https://github.com/TheLastBen/fast-stable-diffusion/raw/main/Dreambooth/convertosd.py
       sed -i '8s@.*@import os@' convertosd.py
@@ -90,15 +101,21 @@ write_files:
       sed -i '202s@.*@    checkpoint_path = os.environ["CHECKPOINT_PATH"]@' convertosd.py
 
       echo "--> Converting Stable Diffusion 1.5 model"
-      MODEL_PATH=stable-diffusion-v1-5 CHECKPOINT_PATH=/home/${ADMIN_USERNAME}/stable-diffusion-webui/models/Stable-diffusion/runwayml-sd-v1-5.ckpt python3 convertosd.py
+      # PyTorchのインストール
+      pip3 install torch numpy
+
+      MODEL_PATH=stable-diffusion-v1-5 CHECKPOINT_PATH=/home/me/stable-diffusion-webui/models/Stable-diffusion/runwayml-sd-v1-5.ckpt python3 convertosd.py
       echo "--> Converting Stable Diffusion 1.5 inpainting model"
       MODEL_PATH=stable-diffusion-inpainting CHECKPOINT_PATH=/home/${ADMIN_USERNAME}/stable-diffusion-webui/models/Stable-diffusion/runwayml-sd-v1-5-inpainting.ckpt python3 convertosd.py
       echo "--> Copying Stable Diffusion 2.0 model"
       wget -O /home/${ADMIN_USERNAME}/stable-diffusion-webui/models/Stable-diffusion/768-v-ema.yaml https://raw.githubusercontent.com/Stability-AI/stablediffusion/main/configs/stable-diffusion/v2-inference-v.yaml
       cp stable-diffusion-2/768-v-ema.ckpt /home/${ADMIN_USERNAME}/stable-diffusion-webui/models/Stable-diffusion/768-v-ema.ckpt
- 
+
       echo "--> installing Extensions"
       cd ~/stable-diffusion-webui
+      # 既存のディレクトリの削除と再クローン
+      rm -rf ~/stable-diffusion-webui/extensions/stable-diffusion-webui-images-browser
+      rm -rf ~/stable-diffusion-webui/extensions/aesthetic-gradients
       git clone https://github.com/yfszzx/stable-diffusion-webui-images-browser extensions/stable-diffusion-webui-images-browser
       git clone https://github.com/AUTOMATIC1111/stable-diffusion-webui-aesthetic-gradients extensions/aesthetic-gradients
       EOF
@@ -127,7 +144,7 @@ write_files:
       from urllib.parse import urlencode
 
       METADATA_URL = "http://169.254.169.254/metadata/scheduledevents?api-version=2017-11-01"
-      
+
       def get_scheduled_events():
           req = Request(METADATA_URL)
           req.add_header('Metadata', 'true')
@@ -197,7 +214,7 @@ packages:
   - ubuntu-drivers-common
   - vim
   - wget
-  
+
 runcmd:
   - systemctl enable spot-helper
   - /root/preflight.sh
