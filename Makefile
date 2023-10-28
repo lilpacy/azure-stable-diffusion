@@ -1,18 +1,18 @@
 # Set environment variables
 export COMPUTE_GROUP?=gpu-compute
 export STORAGE_GROUP?=gpu-storage
-export LOCATION?=eastus
+export LOCATION?=japaneast
 export COMPUTE_COUNT?=3
-export COMPUTE_SKU=Standard_NV6ads_A10_v5
-export COMPUTE_SKU=Standard_NV6_Promo
-export COMPUTE_SKU=Standard_NV6
+export COMPUTE_SKU=Standard_NC4as_T4_v3ads_A10_v5
+export COMPUTE_SKU=Standard_NC4as_T4_v3_Promo
+export COMPUTE_SKU=Standard_NC4as_T4_v3
 export COMPUTE_PRIORITY?=Spot
 export COMPUTE_INSTANCE?=gpu
 export COMPUTE_FQDN=$(COMPUTE_GROUP)-$(COMPUTE_INSTANCE).$(LOCATION).cloudapp.azure.com
 export ADMIN_USERNAME?=me
 export TIMESTAMP=`date "+%Y-%m-%d-%H-%M-%S"`
 export FILE_SHARES=config data models
-export STORAGE_ACCOUNT_NAME?=shared0$(shell echo $(COMPUTE_FQDN)|shasum|base64|tr '[:upper:]' '[:lower:]'|cut -c -16)
+export STORAGE_ACCOUNT_NAME?=shared9$(shell echo $(COMPUTE_FQDN)|shasum|base64|tr '[:upper:]' '[:lower:]'|cut -c -16)
 export SHARE_NAME?=data
 export HUGGINGFACE_TOKEN?=DEFINEME
 export SSH_PORT?=2211
