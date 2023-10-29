@@ -38,7 +38,7 @@ write_files:
       echo "--> Installing Python 3.10"
       apt-get install -y software-properties-common
       add-apt-repository ppa:deadsnakes/ppa -y
-      apt-get install -y python3.10 python3.10-dev python3.10-venv python3.10-distutils
+      apt-get install -y python3.10 python3.10-dev python3.10-distutils
       update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.10 1
       curl -sS https://bootstrap.pypa.io/get-pip.py | python3.10
       python3.10 -m pip install --upgrade pip
@@ -64,60 +64,106 @@ write_files:
       git clone https://github.com/AUTOMATIC1111/stable-diffusion-webui.git ~/stable-diffusion-webui
       cd ~/stable-diffusion-webui
       chmod 700 webui.sh
-      # ./webui.sh --share &
       cd ~/stable-diffusion-webui
       # Make generated content persistent in the mounted file share so we can destroy the VM at will
       mkdir -p /srv/outputs
       ln -s /srv/outputs outputs
       mkdir -p ~/stable-diffusion-webui/models/Stable-diffusion
       cd ~/stable-diffusion-webui/models/Stable-diffusion
-      echo "--> Downloading precompiled attention model"
-      wget -q -O model.ckpt https://raw.githubusercontent.com/TheLastBen/fast-stable-diffusion/main/precompiled/attention.py
-      source ~/stable-diffusion-webui/venv/bin/activate
 
-      echo "--> Downloading Huggingface data"
-      cd /mnt/scratch
-      git init
-      git lfs install --skip-repo
-      git config core.sparsecheckout true
-      echo "--> RunwayML SD 1.5"
-      git clone --branch fp16 "https://USER:${HUGGINGFACE_TOKEN}@huggingface.co/runwayml/stable-diffusion-v1-5"
-      git clone --branch fp16 "https://USER:${HUGGINGFACE_TOKEN}@huggingface.co/runwayml/stable-diffusion-inpainting"
-      echo "--> StabilityAI Autoencoders"
-      git clone "https://USER:${HUGGINGFACE_TOKEN}@huggingface.co/stabilityai/sd-vae-ft-mse"
-      echo "--> StabilityAI SD 2.0"
-      git clone --branch fp16 "https://USER:${HUGGINGFACE_TOKEN}@huggingface.co/stabilityai/stable-diffusion-2"
-
-      echo "--> Patching SD 1.5 with Autoencoders"
-      rm -r stable-diffusion-v1-5/vae
-      rm -r stable-diffusion-inpainting/vae
-      cp -r sd-vae-ft-mse stable-diffusion-v1-5/vae        
-      mv sd-vae-ft-mse stable-diffusion-inpainting/vae
-
-      # Retrieve and patch the model converter in a sane fashion
-      wget -O convertosd.py https://github.com/TheLastBen/fast-stable-diffusion/raw/main/Dreambooth/convertosd.py
-      sed -i '8s@.*@import os@' convertosd.py
-      sed -i '201s@.*@    model_path = os.environ["MODEL_PATH"]@' convertosd.py
-      sed -i '202s@.*@    checkpoint_path = os.environ["CHECKPOINT_PATH"]@' convertosd.py
-
-      echo "--> Converting Stable Diffusion 1.5 model"
-      # PyTorchのインストール
-      pip3 install torch numpy
-
-      MODEL_PATH=stable-diffusion-v1-5 CHECKPOINT_PATH=/home/me/stable-diffusion-webui/models/Stable-diffusion/runwayml-sd-v1-5.ckpt python3 convertosd.py
-      echo "--> Converting Stable Diffusion 1.5 inpainting model"
-      MODEL_PATH=stable-diffusion-inpainting CHECKPOINT_PATH=/home/${ADMIN_USERNAME}/stable-diffusion-webui/models/Stable-diffusion/runwayml-sd-v1-5-inpainting.ckpt python3 convertosd.py
-      echo "--> Copying Stable Diffusion 2.0 model"
-      wget -O /home/${ADMIN_USERNAME}/stable-diffusion-webui/models/Stable-diffusion/768-v-ema.yaml https://raw.githubusercontent.com/Stability-AI/stablediffusion/main/configs/stable-diffusion/v2-inference-v.yaml
-      cp stable-diffusion-2/768-v-ema.ckpt /home/${ADMIN_USERNAME}/stable-diffusion-webui/models/Stable-diffusion/768-v-ema.ckpt
-
-      echo "--> installing Extensions"
+      echo "--> Installing extensions"
       cd ~/stable-diffusion-webui
-      # 既存のディレクトリの削除と再クローン
-      rm -rf ~/stable-diffusion-webui/extensions/stable-diffusion-webui-images-browser
-      rm -rf ~/stable-diffusion-webui/extensions/aesthetic-gradients
-      git clone https://github.com/yfszzx/stable-diffusion-webui-images-browser extensions/stable-diffusion-webui-images-browser
-      git clone https://github.com/AUTOMATIC1111/stable-diffusion-webui-aesthetic-gradients extensions/aesthetic-gradients
+      git clone https://huggingface.co/embed/negative ~/stable-diffusion-webui/embeddings/negative
+      git clone https://huggingface.co/embed/lora ~/stable-diffusion-webui/models/Lora/positive
+      wget https://raw.githubusercontent.com/camenduru/stable-diffusion-webui-scripts/main/run_n_times.py -O ~/stable-diffusion-webui/scripts/run_n_times.py
+      git clone https://github.com/deforum-art/deforum-for-automatic1111-webui ~/stable-diffusion-webui/extensions/deforum-for-automatic1111-webui
+      git clone https://github.com/camenduru/stable-diffusion-webui-images-browser ~/stable-diffusion-webui/extensions/stable-diffusion-webui-images-browser
+      git clone https://github.com/camenduru/stable-diffusion-webui-huggingface ~/stable-diffusion-webui/extensions/stable-diffusion-webui-huggingface
+      git clone https://github.com/camenduru/sd-civitai-browser ~/stable-diffusion-webui/extensions/sd-civitai-browser
+      git clone https://github.com/kohya-ss/sd-webui-additional-networks ~/stable-diffusion-webui/extensions/sd-webui-additional-networks
+      git clone https://github.com/Mikubill/sd-webui-controlnet ~/stable-diffusion-webui/extensions/sd-webui-controlnet
+      git clone https://github.com/fkunn1326/openpose-editor ~/stable-diffusion-webui/extensions/openpose-editor
+      git clone https://github.com/jexom/sd-webui-depth-lib ~/stable-diffusion-webui/extensions/sd-webui-depth-lib
+      git clone https://github.com/hnmr293/posex ~/stable-diffusion-webui/extensions/posex
+      git clone https://github.com/nonnonstop/sd-webui-3d-open-pose-editor ~/stable-diffusion-webui/extensions/sd-webui-3d-open-pose-editor
+      git clone https://github.com/camenduru/sd-webui-tunnels ~/stable-diffusion-webui/extensions/sd-webui-tunnels
+      git clone https://github.com/etherealxx/batchlinks-webui ~/stable-diffusion-webui/extensions/batchlinks-webui
+      git clone https://github.com/camenduru/stable-diffusion-webui-catppuccin ~/stable-diffusion-webui/extensions/stable-diffusion-webui-catppuccin
+      git clone https://github.com/camenduru/a1111-sd-webui-locon ~/stable-diffusion-webui/extensions/a1111-sd-webui-locon
+      git clone https://github.com/AUTOMATIC1111/stable-diffusion-webui-rembg ~/stable-diffusion-webui/extensions/stable-diffusion-webui-rembg
+      git clone https://github.com/ashen-sensored/stable-diffusion-webui-two-shot ~/stable-diffusion-webui/extensions/stable-diffusion-webui-two-shot
+      git clone https://github.com/thomasasfk/sd-webui-aspect-ratio-helper ~/stable-diffusion-webui/extensions/sd-webui-aspect-ratio-helper
+      git clone https://github.com/adieyal/sd-dynamic-prompts ~/stable-diffusion-webui/extensions/sd-dynamic-prompts
+      git clone https://github.com/mattjaybe/sd-wildcards ~/stable-diffusion-webui/extensions/sd-dynamic-prompts/wildcards
+
+      # control-net
+      aria2c --console-log-level=error -c -x 16 -s 16 -k 1M https://huggingface.co/ckpt/ControlNet-v1-1/resolve/main/control_v11e_sd15_ip2p_fp16.safetensors -d ~/stable-diffusion-webui/extensions/sd-webui-controlnet/models -o control_v11e_sd15_ip2p_fp16.safetensors
+      aria2c --console-log-level=error -c -x 16 -s 16 -k 1M https://huggingface.co/ckpt/ControlNet-v1-1/resolve/main/control_v11e_sd15_shuffle_fp16.safetensors -d ~/stable-diffusion-webui/extensions/sd-webui-controlnet/models -o control_v11e_sd15_shuffle_fp16.safetensors
+      aria2c --console-log-level=error -c -x 16 -s 16 -k 1M https://huggingface.co/ckpt/ControlNet-v1-1/resolve/main/control_v11p_sd15_canny_fp16.safetensors -d ~/stable-diffusion-webui/extensions/sd-webui-controlnet/models -o control_v11p_sd15_canny_fp16.safetensors
+      aria2c --console-log-level=error -c -x 16 -s 16 -k 1M https://huggingface.co/ckpt/ControlNet-v1-1/resolve/main/control_v11f1p_sd15_depth_fp16.safetensors -d ~/stable-diffusion-webui/extensions/sd-webui-controlnet/models -o control_v11f1p_sd15_depth_fp16.safetensors
+      aria2c --console-log-level=error -c -x 16 -s 16 -k 1M https://huggingface.co/ckpt/ControlNet-v1-1/resolve/main/control_v11p_sd15_inpaint_fp16.safetensors -d ~/stable-diffusion-webui/extensions/sd-webui-controlnet/models -o control_v11p_sd15_inpaint_fp16.safetensors
+      aria2c --console-log-level=error -c -x 16 -s 16 -k 1M https://huggingface.co/ckpt/ControlNet-v1-1/resolve/main/control_v11p_sd15_lineart_fp16.safetensors -d ~/stable-diffusion-webui/extensions/sd-webui-controlnet/models -o control_v11p_sd15_lineart_fp16.safetensors
+      aria2c --console-log-level=error -c -x 16 -s 16 -k 1M https://huggingface.co/ckpt/ControlNet-v1-1/resolve/main/control_v11p_sd15_mlsd_fp16.safetensors -d ~/stable-diffusion-webui/extensions/sd-webui-controlnet/models -o control_v11p_sd15_mlsd_fp16.safetensors
+      aria2c --console-log-level=error -c -x 16 -s 16 -k 1M https://huggingface.co/ckpt/ControlNet-v1-1/resolve/main/control_v11p_sd15_normalbae_fp16.safetensors -d ~/stable-diffusion-webui/extensions/sd-webui-controlnet/models -o control_v11p_sd15_normalbae_fp16.safetensors
+      aria2c --console-log-level=error -c -x 16 -s 16 -k 1M https://huggingface.co/ckpt/ControlNet-v1-1/resolve/main/control_v11p_sd15_openpose_fp16.safetensors -d ~/stable-diffusion-webui/extensions/sd-webui-controlnet/models -o control_v11p_sd15_openpose_fp16.safetensors
+      aria2c --console-log-level=error -c -x 16 -s 16 -k 1M https://huggingface.co/ckpt/ControlNet-v1-1/resolve/main/control_v11p_sd15_scribble_fp16.safetensors -d ~/stable-diffusion-webui/extensions/sd-webui-controlnet/models -o control_v11p_sd15_scribble_fp16.safetensors
+      aria2c --console-log-level=error -c -x 16 -s 16 -k 1M https://huggingface.co/ckpt/ControlNet-v1-1/resolve/main/control_v11p_sd15_seg_fp16.safetensors -d ~/stable-diffusion-webui/extensions/sd-webui-controlnet/models -o control_v11p_sd15_seg_fp16.safetensors
+      aria2c --console-log-level=error -c -x 16 -s 16 -k 1M https://huggingface.co/ckpt/ControlNet-v1-1/resolve/main/control_v11p_sd15_softedge_fp16.safetensors -d ~/stable-diffusion-webui/extensions/sd-webui-controlnet/models -o control_v11p_sd15_softedge_fp16.safetensors
+      aria2c --console-log-level=error -c -x 16 -s 16 -k 1M https://huggingface.co/ckpt/ControlNet-v1-1/resolve/main/control_v11p_sd15s2_lineart_anime_fp16.safetensors -d ~/stable-diffusion-webui/extensions/sd-webui-controlnet/models -o control_v11p_sd15s2_lineart_anime_fp16.safetensors
+      aria2c --console-log-level=error -c -x 16 -s 16 -k 1M https://huggingface.co/ckpt/ControlNet-v1-1/resolve/main/control_v11f1e_sd15_tile_fp16.safetensors -d ~/stable-diffusion-webui/extensions/sd-webui-controlnet/models -o control_v11f1e_sd15_tile_fp16.safetensors
+      aria2c --console-log-level=error -c -x 16 -s 16 -k 1M https://huggingface.co/ckpt/ControlNet-v1-1/raw/main/control_v11e_sd15_ip2p_fp16.yaml -d ~/stable-diffusion-webui/extensions/sd-webui-controlnet/models -o control_v11e_sd15_ip2p_fp16.yaml
+      aria2c --console-log-level=error -c -x 16 -s 16 -k 1M https://huggingface.co/ckpt/ControlNet-v1-1/raw/main/control_v11e_sd15_shuffle_fp16.yaml -d ~/stable-diffusion-webui/extensions/sd-webui-controlnet/models -o control_v11e_sd15_shuffle_fp16.yaml
+      aria2c --console-log-level=error -c -x 16 -s 16 -k 1M https://huggingface.co/ckpt/ControlNet-v1-1/raw/main/control_v11p_sd15_canny_fp16.yaml -d ~/stable-diffusion-webui/extensions/sd-webui-controlnet/models -o control_v11p_sd15_canny_fp16.yaml
+      aria2c --console-log-level=error -c -x 16 -s 16 -k 1M https://huggingface.co/ckpt/ControlNet-v1-1/raw/main/control_v11f1p_sd15_depth_fp16.yaml -d ~/stable-diffusion-webui/extensions/sd-webui-controlnet/models -o control_v11f1p_sd15_depth_fp16.yaml
+      aria2c --console-log-level=error -c -x 16 -s 16 -k 1M https://huggingface.co/ckpt/ControlNet-v1-1/raw/main/control_v11p_sd15_inpaint_fp16.yaml -d ~/stable-diffusion-webui/extensions/sd-webui-controlnet/models -o control_v11p_sd15_inpaint_fp16.yaml
+      aria2c --console-log-level=error -c -x 16 -s 16 -k 1M https://huggingface.co/ckpt/ControlNet-v1-1/raw/main/control_v11p_sd15_lineart_fp16.yaml -d ~/stable-diffusion-webui/extensions/sd-webui-controlnet/models -o control_v11p_sd15_lineart_fp16.yaml
+      aria2c --console-log-level=error -c -x 16 -s 16 -k 1M https://huggingface.co/ckpt/ControlNet-v1-1/raw/main/control_v11p_sd15_mlsd_fp16.yaml -d ~/stable-diffusion-webui/extensions/sd-webui-controlnet/models -o control_v11p_sd15_mlsd_fp16.yaml
+      aria2c --console-log-level=error -c -x 16 -s 16 -k 1M https://huggingface.co/ckpt/ControlNet-v1-1/raw/main/control_v11p_sd15_normalbae_fp16.yaml -d ~/stable-diffusion-webui/extensions/sd-webui-controlnet/models -o control_v11p_sd15_normalbae_fp16.yaml
+      aria2c --console-log-level=error -c -x 16 -s 16 -k 1M https://huggingface.co/ckpt/ControlNet-v1-1/raw/main/control_v11p_sd15_openpose_fp16.yaml -d ~/stable-diffusion-webui/extensions/sd-webui-controlnet/models -o control_v11p_sd15_openpose_fp16.yaml
+      aria2c --console-log-level=error -c -x 16 -s 16 -k 1M https://huggingface.co/ckpt/ControlNet-v1-1/raw/main/control_v11p_sd15_scribble_fp16.yaml -d ~/stable-diffusion-webui/extensions/sd-webui-controlnet/models -o control_v11p_sd15_scribble_fp16.yaml
+      aria2c --console-log-level=error -c -x 16 -s 16 -k 1M https://huggingface.co/ckpt/ControlNet-v1-1/raw/main/control_v11p_sd15_seg_fp16.yaml -d ~/stable-diffusion-webui/extensions/sd-webui-controlnet/models -o control_v11p_sd15_seg_fp16.yaml
+      aria2c --console-log-level=error -c -x 16 -s 16 -k 1M https://huggingface.co/ckpt/ControlNet-v1-1/raw/main/control_v11p_sd15_softedge_fp16.yaml -d ~/stable-diffusion-webui/extensions/sd-webui-controlnet/models -o control_v11p_sd15_softedge_fp16.yaml
+      aria2c --console-log-level=error -c -x 16 -s 16 -k 1M https://huggingface.co/ckpt/ControlNet-v1-1/raw/main/control_v11p_sd15s2_lineart_anime_fp16.yaml -d ~/stable-diffusion-webui/extensions/sd-webui-controlnet/models -o control_v11p_sd15s2_lineart_anime_fp16.yaml
+      aria2c --console-log-level=error -c -x 16 -s 16 -k 1M https://huggingface.co/ckpt/ControlNet-v1-1/raw/main/control_v11f1e_sd15_tile_fp16.yaml -d ~/stable-diffusion-webui/extensions/sd-webui-controlnet/models -o control_v11f1e_sd15_tile_fp16.yaml
+      aria2c --console-log-level=error -c -x 16 -s 16 -k 1M https://huggingface.co/ckpt/ControlNet-v1-1/resolve/main/t2iadapter_style_sd14v1.pth -d ~/stable-diffusion-webui/extensions/sd-webui-controlnet/models -o t2iadapter_style_sd14v1.pth
+      aria2c --console-log-level=error -c -x 16 -s 16 -k 1M https://huggingface.co/ckpt/ControlNet-v1-1/resolve/main/t2iadapter_sketch_sd14v1.pth -d ~/stable-diffusion-webui/extensions/sd-webui-controlnet/models -o t2iadapter_sketch_sd14v1.pth
+      aria2c --console-log-level=error -c -x 16 -s 16 -k 1M https://huggingface.co/ckpt/ControlNet-v1-1/resolve/main/t2iadapter_seg_sd14v1.pth -d ~/stable-diffusion-webui/extensions/sd-webui-controlnet/models -o t2iadapter_seg_sd14v1.pth
+      aria2c --console-log-level=error -c -x 16 -s 16 -k 1M https://huggingface.co/ckpt/ControlNet-v1-1/resolve/main/t2iadapter_openpose_sd14v1.pth -d ~/stable-diffusion-webui/extensions/sd-webui-controlnet/models -o t2iadapter_openpose_sd14v1.pth
+      aria2c --console-log-level=error -c -x 16 -s 16 -k 1M https://huggingface.co/ckpt/ControlNet-v1-1/resolve/main/t2iadapter_keypose_sd14v1.pth -d ~/stable-diffusion-webui/extensions/sd-webui-controlnet/models -o t2iadapter_keypose_sd14v1.pth
+      aria2c --console-log-level=error -c -x 16 -s 16 -k 1M https://huggingface.co/ckpt/ControlNet-v1-1/resolve/main/t2iadapter_depth_sd14v1.pth -d ~/stable-diffusion-webui/extensions/sd-webui-controlnet/models -o t2iadapter_depth_sd14v1.pth
+      aria2c --console-log-level=error -c -x 16 -s 16 -k 1M https://huggingface.co/ckpt/ControlNet-v1-1/resolve/main/t2iadapter_color_sd14v1.pth -d ~/stable-diffusion-webui/extensions/sd-webui-controlnet/models -o t2iadapter_color_sd14v1.pth
+      aria2c --console-log-level=error -c -x 16 -s 16 -k 1M https://huggingface.co/ckpt/ControlNet-v1-1/resolve/main/t2iadapter_canny_sd14v1.pth -d ~/stable-diffusion-webui/extensions/sd-webui-controlnet/models -o t2iadapter_canny_sd14v1.pth
+      aria2c --console-log-level=error -c -x 16 -s 16 -k 1M https://huggingface.co/ckpt/ControlNet-v1-1/resolve/main/t2iadapter_canny_sd15v2.pth -d ~/stable-diffusion-webui/extensions/sd-webui-controlnet/models -o t2iadapter_canny_sd15v2.pth
+      aria2c --console-log-level=error -c -x 16 -s 16 -k 1M https://huggingface.co/ckpt/ControlNet-v1-1/resolve/main/t2iadapter_depth_sd15v2.pth -d ~/stable-diffusion-webui/extensions/sd-webui-controlnet/models -o t2iadapter_depth_sd15v2.pth
+      aria2c --console-log-level=error -c -x 16 -s 16 -k 1M https://huggingface.co/ckpt/ControlNet-v1-1/resolve/main/t2iadapter_sketch_sd15v2.pth -d ~/stable-diffusion-webui/extensions/sd-webui-controlnet/models -o t2iadapter_sketch_sd15v2.pth
+      aria2c --console-log-level=error -c -x 16 -s 16 -k 1M https://huggingface.co/ckpt/ControlNet-v1-1/resolve/main/t2iadapter_zoedepth_sd15v1.pth -d ~/stable-diffusion-webui/extensions/sd-webui-controlnet/models -o t2iadapter_zoedepth_sd15v1.pth
+      aria2c --console-log-level=error -c -x 16 -s 16 -k 1M https://huggingface.co/ckpt/sd15/resolve/main/v1-5-pruned-emaonly.ckpt -d ~/stable-diffusion-webui/models/Stable-diffusion -o v1-5-pruned-emaonly.ckpt
+
+      echo "--> Installing models"
+      cd ~/stable-diffusion-webui
+      # # https://civitai.com/models/9942/abyssorangemix3-aom3
+      # aria2c --console-log-level=error -c -x 16 -s 16 -k 1M https://civitai.com/api/download/models/17233 -d ~/stable-diffusion-webui/models/Stable-diffusion -o abyssorangemix3AOM3_aom3a1b.safetensors
+      # # https://civitai.com/models/4468/counterfeit-v30
+      # aria2c --console-log-level=error -c -x 16 -s 16 -k 1M https://civitai.com/api/download/models/57618 -d ~/stable-diffusion-webui/models/Stable-diffusion -o CounterfeitV30.safetensors
+      # https://civitai.com/models/6755/cetus-mix
+      aria2c --console-log-level=error -c -x 16 -s 16 -k 1M https://civitai.com/api/download/models/78676 -d ~/stable-diffusion-webui/models/Stable-diffusion -o cetus-mix-v4.safetensors
+      # # https://civitai.com/models/6755?modelVersionId=48569
+      # aria2c --console-log-level=error -c -x 16 -s 16 -k 1M https://civitai.com/api/download/models/48569 -d ~/stable-diffusion-webui/models/Stable-diffusion -o cetusMix_Coda2.safetensors
+
+      echo "--> Installing loras"
+      cd ~/stable-diffusion-webui
+      # # https://civitai.com/models/7252/charturnerbeta-lora-experimental
+      # aria2c --console-log-level=error -c -x 16 -s 16 -k 1M https://civitai.com/api/download/models/8527 -d ~/stable-diffusion-webui/models/Lora/positive -o CharTurnerBeta.safetensors
+      # # https://civitai.com/models/55504/character-a-poses-vtuber-reference-pose-fullbody-halfbody
+      # aria2c --console-log-level=error -c -x 16 -s 16 -k 1M https://civitai.com/api/download/models/59893 -d ~/stable-diffusion-webui/models/Lora/positive -o vtuber-poses-05.safetensors
+      # https://civitai.com/models/44960/mpixel
+      aria2c --console-log-level=error -c -x 16 -s 16 -k 1M https://civitai.com/api/download/models/52870 -d ~/stable-diffusion-webui/models/Lora/positive -o pixel-f2.safetensors
+      # # https://civitai.com/models/8029/elegant-hanfu-ruqun-style
+      # aria2c --console-log-level=error -c -x 16 -s 16 -k 1M https://civitai.com/api/download/models/9470 -d ~/stable-diffusion-webui/models/Lora/positive -o elegant-hanfu-ruqun-style.safetensors
+
+      echo "--> Starting webui"
+      cd ~/stable-diffusion-webui
+      venv_dir=- ./webui.sh --share --theme dark
       EOF
 
       echo "==> Preflight done."
@@ -214,6 +260,7 @@ packages:
   - ubuntu-drivers-common
   - vim
   - wget
+  - aria2
 
 runcmd:
   - systemctl enable spot-helper

@@ -18,7 +18,7 @@
     },
     "instanceManagementAllowedSourceAddressPrefixes": {
       "type": "array",
-      "defaultValue": [ "*" ],
+      "defaultValue": ["*"],
       "metadata": {
         "description": "Allowed IP address(es) for SSH access"
       }
@@ -29,18 +29,12 @@
       "metadata": {
         "description": "instance instance size"
       },
-      "allowedValues": [
-        "Standard_NC4as_T4_v3"
-      ]
+      "allowedValues": ["Standard_NC4as_T4_v3"]
     },
     "instancePriority": {
       "type": "string",
       "defaultValue": "Spot",
-      "allowedValues": [
-        "Low",
-        "Regular",
-        "Spot"
-      ],
+      "allowedValues": ["Low", "Regular", "Spot"],
       "metadata": {
         "description": "Instance priority"
       }
@@ -48,10 +42,7 @@
     "enableNVIDIA": {
       "type": "string",
       "defaultValue": "true",
-      "allowedValues": [
-        "true",
-        "false"
-      ],
+      "allowedValues": ["true", "false"],
       "metadata": {
         "description": "Whether or not these machines will require an NVIDIA-compatible image"
       }
@@ -80,10 +71,7 @@
     "saType": {
       "type": "string",
       "defaultValue": "Standard_LRS",
-      "allowedValues": [
-        "Standard_LRS",
-        "Premium_LRS"
-      ],
+      "allowedValues": ["Standard_LRS", "Premium_LRS"],
       "metadata": {
         "description": "Storage account type"
       }
@@ -91,23 +79,15 @@
     "diskType": {
       "type": "string",
       "defaultValue": "StandardSSD_LRS",
-      "allowedValues": [
-        "StandardSSD_LRS",
-        "Standard_LRS",
-        "Premium_LRS"
-      ],
+      "allowedValues": ["StandardSSD_LRS", "Standard_LRS", "Premium_LRS"],
       "metadata": {
         "description": "OS disk type"
       }
     },
     "diskSizeGB": {
       "type": "int",
-      "defaultValue": 32,
-      "allowedValues": [
-        32,
-        64,
-        128
-      ],
+      "defaultValue": 128,
+      "allowedValues": [32, 64, 128],
       "metadata": {
         "description": "OS disk size"
       }
@@ -138,9 +118,7 @@
       "location": "[resourceGroup().location]",
       "properties": {
         "addressSpace": {
-          "addressPrefixes": [
-            "10.0.0.0/8"
-          ]
+          "addressPrefixes": ["10.0.0.0/8"]
         },
         "subnets": [
           {
